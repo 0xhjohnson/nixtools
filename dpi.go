@@ -72,6 +72,25 @@ func calcDPI(res []float64, dim []float64) (dpi int) {
 	return
 }
 
+func confirm(s string, tries int) bool {
+	r := bufio.NewReader(os.Stdin)
+
+	for ; tries > 0; tries-- {
+		fmt.Printf("%s [y/n]: ", s)
+
+		res, err := r.ReadString('\n')
+		if err != nil {
+			log.Fatalf("Failed to parse input response: %v", err)
+		}
+
+		if len(res) < 2 {
+			continue
+		}
+		return strings.ToLower(strings.TrimSpace(res))[0] == 'y'
+	}
+	return false
+}
+
 func main() {
 	plat := getPlatform()
 	if plat != "linux" {
@@ -86,6 +105,7 @@ func main() {
 	var name string
 	var res []float64
 	dim := make([]float64, 0, 2)
+	displays := make([]display, 0)
 
 	for s.Scan() {
 		switch s.Text() {
@@ -100,16 +120,24 @@ func main() {
 			dim = append(dim, in)
 			if len(dim) == 2 {
 				dpi := calcDPI(res, dim)
-				p := display{name, res, dim, dpi}
-				fmt.Printf("%s dpi: %d \n", p.name, p.dpi)
+				displays = append(displays, display{name, res, dim, dpi})
 				// reset in prep for multiple displays
-				res = res[:0]
-				dim = dim[:0]
+				dim = nil
 			}
 		}
 	}
 
 	if len(name) <= 0 {
 		fmt.Printf("No displays connected...\n")
+	}
+
+	for _, dis := range displays {
+		fmt.Printf("%s dpi: %d \n", dis.name, dis.dpi)
+	}
+
+	c := confirm("Would you like to configure xrandr config file?", 3)
+	if !c {
+		fmt.Printf("bye \n")
+		return
 	}
 }
